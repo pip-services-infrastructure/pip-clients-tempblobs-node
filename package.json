@@ -1,6 +1,6 @@
 {
     "name": "pip-clients-tempblobs-node",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "Conceptual Vision Consulting LLC",
     "description": "Tempblobs client SDK for Pip.Services in Node.js",
     "contributors": [
@@ -39,20 +39,20 @@
         "rebenchmark": "tsc && matcha -R clean -I tdd ./obj/benchmark/run.js"
     },
     "dependencies": {
+        "pip-clients-blobs-node": "^1.0.4",
         "pip-services3-commons-node": "^3.0.0",
         "pip-services3-components-node": "^3.0.0",
-        "pip-services3-rpc-node": "^3.0.0",
-        "pip-clients-blobs-node": "^1.0.0"
+        "pip-services3-rpc-node": "^3.0.0"
     },
     "devDependencies": {
-        "@types/node": "*",
-        "@types/lodash": "^4.0.0",
         "@types/async": "^2.0.0",
         "@types/chai": "*",
+        "@types/lodash": "^4.0.0",
         "@types/mocha": "^7.0.0",
-        "restify": "^4.3.0",
+        "@types/node": "*",
         "chai": "*",
         "mocha": "^7.0.0",
-        "pip-services-blobs-node": "^1.1.0"
+        "pip-services-blobs-node": "^1.1.4",
+        "restify": "^4.3.0"
     }
 }

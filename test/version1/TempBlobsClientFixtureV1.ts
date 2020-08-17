@@ -1,275 +1,409 @@
-// let _ = require('lodash');
-// let async = require('async');
-// let assert = require('chai').assert;
-// let stream = require('stream');
+const { Readable } = require('stream');
+let _ = require('lodash');
+let async = require('async');
+let assert = require('chai').assert;
 // let fs = require('fs');
 
-// import { IdGenerator } from 'pip-services3-commons-node';
+import { IdGenerator, PagingParams, FilterParams, RandomString } from 'pip-services3-commons-node';
 
-// import { BlobInfoV1 } from '../../src/version1/TempBlobInfoV1';
-// import { ITempBlobsClientV1 } from '../../src/version1/ITempBlobsClientV1';
+import { TempBlobInfoV1 } from '../../src/version1/TempBlobInfoV1';
+import { ITempBlobsClientV1 } from '../../src/version1/ITempBlobsClientV1';
+import { DataEnvelopV1 } from '../../src';
 
-// export class TempBlobsClientFixtureV1 {
-//     private _client: ITempBlobsClientV1;
-    
-//     constructor(client: ITempBlobsClientV1) {
-//         this._client = client;
-//     }
-        
-//     public testReadWriteChunks(done) {
-//         let blobId = IdGenerator.nextLong();
-//         let token: string = null;
-//         let client: any = this._client;
+export class TempBlobsClientFixtureV1 {
+    private _client: ITempBlobsClientV1;
 
-//         async.series([
-//         // Start writing blob
-//             (callback) => {
-//                 let blob = new BlobInfoV1(
-//                     blobId, 'test', 'file-' + blobId + '.dat',  6, 'application/binary'
-//                 );
+    constructor(client: ITempBlobsClientV1) {
+        this._client = client;
+    }
 
-//                 client.beginBlobWrite(
-//                     null, blob,
-//                     (err, tok) => {
-//                         assert.isNull(err);
-//                         token = tok;
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Write blob
-//             (callback) => {
-//                 let chunk = Buffer.from([1, 2, 3]).toString('base64');
+    public createBlobs(callback: (err, ids: {
+        blobId1?: string,
+        blobId2?: string,
+        blobId3?: string,
+        blobId4?: string
+    }) => void) {
 
-//                 client.writeBlobChunk(
-//                     null, token, chunk, 
-//                     (err, tok) => {
-//                         assert.isNull(err);
-//                         token = tok;
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Finish writing blob
-//             (callback) => {
-//                 let chunk = Buffer.from([4, 5, 6]).toString('base64');
+        var ids: {
+            blobId1?: string,
+            blobId2?: string,
+            blobId3?: string,
+            blobId4?: string
+        } = {};
 
-//                 client.endBlobWrite(
-//                     null, token, chunk,
-//                     (err) => {
-//                         assert.isNull(err);
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Start reading
-//             (callback) => {
-//                 client.beginBlobRead(
-//                     null, blobId,
-//                     (err, blob) => {
-//                         assert.isNull(err);
+        async.series([
+            (callback) => {
+                this._client.writeBlobAsObject(null, "AAAA", 60, (err, blobId) => {
+                    assert.isNull(err);
+                    ids.blobId1 = blobId;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.writeBlobAsObject(null, "BBBB", 60, (err, blobId) => {
+                    assert.isNull(err);
+                    ids.blobId2 = blobId;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.writeBlobAsObject(null, "CCCC", 60, (err, blobId) => {
+                    assert.isNull(err);
+                    ids.blobId3 = blobId;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.writeBlobAsObject(null, "DDDD", 60, (err, blobId) => {
+                    assert.isNull(err);
+                    ids.blobId4 = blobId;
+                    callback();
+                });
+            }], (err) => {
+                callback(err, ids);
+            });
+    }
 
-//                         assert.equal(6, blob.size);
+    public clear(done) {
+        async.series([
+            (callback) => this._client.getBlobInfosByFilter(null, null, null, (err, page) => {
+                assert.isNull(err);
+                assert.isNotNull(page);
 
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Read first chunk
-//             (callback) => {
-//                 client.readBlobChunk(
-//                     null, blobId, 0, 3,
-//                     (err, chunk) => {
-//                         assert.isNull(err);
+                let ids = page.data.map(x => x.id);
 
-//                         assert.isString(chunk);
+                this._client.deleteBlobsByIds(null, ids, (err) => {
+                    assert.isNull(err);
+                    callback();
+                });
+            })
+        ], done);
+    }
 
-//                         let buffer = Buffer.from(chunk, 'base64');
-//                         assert.lengthOf(buffer, 3);
-//                         assert.equal(1, buffer[0]);
-//                         assert.equal(2, buffer[1]);
-//                         assert.equal(3, buffer[2]);
+    public testGetBlobInfos(done) {
+        var ids: {
+            blobId1?: string,
+            blobId2?: string,
+            blobId3?: string,
+            blobId4?: string
+        } = {};
 
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Get blobs
-//             (callback) => {
-//                 this._client.getTempBlobsByFilter(
-//                     null, null, null, 
-//                     (err, page) => {
-//                         assert.isNull(err);
+        async.series([
+            (callback) => this.createBlobs((err, blobIds) => {
+                assert.isNull(err);
+                ids = blobIds;
+                callback();
+            }),
+            (callback) => {
+                this._client.getBlobUriById(null, ids.blobId1, (err, uri) => {
+                    assert.isNull(err);
+                    // get uri is not supported by pip-services-blobs-node
+                    // assert.isNotNull(uri);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.getBlobInfosByFilter(null, null, new PagingParams(1, 10, false), (err, page) => {
+                    assert.isNull(err);
+                    assert.isNotNull(page);
+                    assert.isTrue(page.data.length >= 3);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.getBlobInfosByFilter(null, FilterParams.fromTuples("id", ids.blobId2), null, (err, page) => {
+                    assert.isNull(err);
+                    assert.isNotNull(page);
+                    assert.equal(1, page.data.length);
+                    callback();
+                });
+            },
+            //  not supported by pip-services-blobs-node
+            // (callback) => {
+            //     this._client.getBlobInfosByFilter(null, FilterParams.fromTuples("ids", blobId1 + "," + blobId3), null, (err, page) => {
+            //         assert.isNull(err);
+            //         assert.isNotNull(page);
+            //         assert.equal(2, page.data.length);
+            //         callback();
+            //     });
+            // },
+            (callback) => {
+                this._client.getBlobInfosByFilter(null, FilterParams.fromTuples("search", ids.blobId2), null, (err, page) => {
+                    assert.isNull(err);
+                    assert.isNotNull(page);
+                    assert.equal(1, page.data.length);
+                    callback();
+                });
+            },
 
-//                         assert.lengthOf(page.data, 1);
+        ], done);
+    }
 
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Delete blob
-//             (callback) => {
-//                 this._client.deleteTempBlobsByIds(
-//                     null, [blobId],
-//                     (err) => {
-//                         assert.isNull(err);
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Try to get deleted blob
-//             (callback) => {
-//                 this._client.getBlobById(
-//                     null, blobId, (err, blob) => {
-//                         assert.isNull(err);
-//                         assert.isNull(blob);
-//                         callback();
-//                     }
-//                 )
-//             }
-//         ], done);
-//     }
+    public testSearch(done) {
+        var ids: {
+            blobId1?: string,
+            blobId2?: string,
+            blobId3?: string,
+            blobId4?: string
+        } = {};
 
-//     public testReadWriteData(done) {
-//         let blobId = IdGenerator.nextLong();
-//         let token: string = null;
+        async.series([
+            (callback) => this.createBlobs((err, blobIds) => {
+                assert.isNull(err);
+                ids = blobIds;
+                callback();
+            }),
+            (callback) => {
+                this._client.getBlobInfosByFilter(null, FilterParams.fromTuples("search", '.dat'), null, (err, page) => {
+                    assert.isNull(err);
+                    assert.isNotNull(page);
+                    assert.equal(4, page.data.length);
+                    callback();
+                });
+            },
+        ], done);
+    }
 
-//         async.series([
-//         // Create blob
-//             (callback) => {
-//                 let blob = new BlobInfoV1(
-//                     blobId, 'test', 'file-' + blobId + '.dat',  6, 'application/binary'
-//                 );
-//                 let data = Buffer.from([1, 2, 3, 4, 5, 6]);
+    public testReadWriteBlobs(done) {
+        var blobId1: string;
+        var blobId2: string;
 
-//                 this._client.createBlobFromData(
-//                     null, blob, data,
-//                     (err, blob) => {
-//                         assert.isNull(err);
+        var original1 = "123";
+        var original2 = "ABC";
 
-//                         assert.isObject(blob);
-//                         assert.equal(6, blob.size);
+        async.series([
+            (callback) => {
+                this._client.writeBlobAsObject(null, original1, 60, (err, blobId) => {
+                    assert.isNull(err);
+                    blobId1 = blobId;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.writeBlobAsObject(null, original2, 60, (err, blobId) => {
+                    assert.isNull(err);
+                    blobId2 = blobId;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.readBlobAsObject<string>(null, blobId1, (err, data1) => {
+                    assert.isNull(err);
+                    assert.equal(original1, data1);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.readBlobAsObject<string>(null, blobId2, (err, data2) => {
+                    assert.isNull(err);
+                    assert.equal(original2, data2);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.deleteBlobById(null, blobId1, (err) => {
+                    assert.isNull(err);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.deleteBlobById(null, blobId2, (err) => {
+                    assert.isNull(err);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.getBlobInfosByFilter(null, null, null, (err, page) => {
+                    assert.isNull(err);
+                    assert.isNotNull(page);
+                    assert.equal(0, page.data.length);
+                    callback();
+                });
+            },
+        ], done);
+    }
 
-//                         callback();
-//                     }
-//                 );
-//             },
-//         // Get blob info
-//             (callback) => {
-//                 this._client.getBlobById(
-//                     null, blobId, (err, blob) => {
-//                         assert.isNull(err);
+    public testReadWriteBlobStreams(done) {
+        var blobId1: string;
+        var original = '123';
 
-//                         assert.isObject(blob);
-//                         assert.equal(6, blob.size);
+        async.series([
+            (callback) => {
+                let rs = Readable.from(original);
 
-//                         callback();
-//                     }
-//                 )
-//             },
-//         // Read blob
-//             (callback) => {
-//                 this._client.getBlobDataById(
-//                     null, blobId,
-//                     (err, blob, data) => {
-//                         assert.isNull(err);
+                let ws = this._client.writeBlobToStream(null, 600, (err, blobId) => {
+                    assert.isNull(err);
+                    blobId1 = blobId;
+                    callback();
+                });
 
-//                         assert.equal(6, blob.size);
-//                         assert.lengthOf(data, 6);
-//                         assert.equal(1, data[0]);
-//                         assert.equal(2, data[1]);
-//                         assert.equal(3, data[2]);
-//                         assert.equal(4, data[3]);
-//                         assert.equal(5, data[4]);
-//                         assert.equal(6, data[5]);
+                assert.isNotNull(ws);
+                rs.pipe(ws);
+            },
+            // Get blob info
+            (callback) => {
+                this._client.getBlobInfoById(
+                    null, blobId1, (err, blob) => {
+                        assert.isNull(err);
 
-//                         callback();
-//                     }
-//                 );
-//             }
-//         ], done);
-//     }
+                        assert.isObject(blob);
+                        assert.equal(3, blob.size);
 
-//     public testReadWriteStream(done) {
-//         let blobId = IdGenerator.nextLong();
-//         let token: string = null;
-//         let sample: string = fs.readFileSync('./data/file.txt').toString();
+                        callback();
+                    }
+                )
+            },
+            (callback) => {
+                let outData;
 
-//         async.series([
-//         // Create blob
-//             (callback) => {
-//                 let blob = new BlobInfoV1(
-//                     blobId, 'test', './data/file.txt'
-//                 );
-//                 let rs = fs.createReadStream('./data/file.txt');
+                let rs = this._client.readBlobFromStream(null, blobId1, (err, blobId, stream) => {
+                    assert.isNull(err);
+                    assert.equal(blobId1, blobId);
+                    assert.equal(original.length, outData.length);
+                    callback();
+                });
 
-//                 let ws = this._client.createBlobFromStream(
-//                     null, blob,
-//                     (err, blob) => {
-//                         assert.isNull(err);
+                const chunks = [];
 
-//                         assert.isObject(blob);
-//                         assert.equal('file.txt', blob.name);
-//                         assert.equal(sample.length, blob.size);
+                rs.on('readable', () => {
+                    let chunk;
+                    while (null !== (chunk = rs.read())) {
+                        chunks.push(chunk);
+                    }
+                });
 
-//                         callback();
-//                     }
-//                 );
-//                 rs.pipe(ws);
-//             },
-//         // Get blob info
-//             (callback) => {
-//                 this._client.getBlobById(
-//                     null, blobId, (err, blob) => {
-//                         assert.isNull(err);
+                rs.on('end', () => {
+                    outData = chunks.join('');
+                });
+            },
+            (callback) => {
+                this._client.deleteBlobById(null, blobId1, (err) => {
+                    assert.isNull(err);
+                    callback();
+                });
+            },
+        ], done);
+    }
 
-//                         assert.isObject(blob);
-//                         assert.equal('file.txt', blob.name);
-//                         assert.equal(sample.length, blob.size);
+    public testBlobExpiration(done) {
+        var blobId1: string;
+        var blobId2: string;
 
-//                         callback();
-//                     }
-//                 )
-//             },
-//         // Read blob
-//             (callback) => {
-//                 if (fs.existsSync('./data/file.tmp'))
-//                     fs.unlinkSync('./data/file.tmp');
+        var original1 = "123";
+        var original2 = "ABC";
 
-//                 let ws = fs.createWriteStream(
-//                     './data/file.tmp',
-//                     {
-//                         flags: 'w',
-//                         autoClose: true
-//                     }
-//                 );
+        async.series([
+            (callback) => {
+                this._client.writeBlobAsObject(null, original1, 0, (err, blobId) => {
+                    assert.isNull(err);
+                    blobId1 = blobId;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.writeBlobAsObject(null, original2, 0, (err, blobId) => {
+                    assert.isNull(err);
+                    blobId2 = blobId;
+                    callback();
+                });
+            },
+            // (callback) => {
+            //     setTimeout(() => {
+            //         callback();
+            //     }, 100);
+            // },
+            // deleteExpired method not implemented?
+            // (callback) => {
+            //     this._client.deleteExpired(null, blobId1, (err) => {
+            //         assert.isNull(err);
+            //         callback();
+            //     });
+            // },
+            (callback) => {
+                this._client.getBlobInfosByFilter(null, FilterParams.fromTuples('expired', false), null, (err, page) => {
+                    assert.isNull(err);
+                    assert.isNotNull(page);
+                    assert.equal(0, page.data.length);
+                    callback();
+                });
+            },
+        ], done);
+    }
 
-//                 let rs = this._client.getBlobStreamById(
-//                     null, blobId,
-//                     (err, blob, rs) => {
-//                         // Wait until file cache is written
-//                         setTimeout(() => {
-//                             assert.isNull(err);
+    public testConditionalReadWrite(done) {
+        var envelop1: DataEnvelopV1<string>;
+        var maxObjectSize: number = 30 * 1024;
+        var compressionThreshold: number = 100 * 1024;
 
-//                             let sample1 = fs.readFileSync('./data/file.tmp').toString();
-//                             fs.unlinkSync('./data/file.tmp');
-//                             assert.equal(sample1, sample);
+        var testData1 = RandomString.nextString(maxObjectSize + 1, maxObjectSize + 2);
+        var testData2 = RandomString.nextString(compressionThreshold + 100, compressionThreshold + 200);
 
-//                             callback();
-//                         }, 100);
-//                     }
-//                 );
-//                 rs.pipe(ws);
-//             }
-//         ], done);
-//     }
+        async.series([
+            (callback) => {
+                this._client.writeBlobConditional(null, null, 60, (err, envelop) => {
+                    assert.isNull(err);
+                    assert.isNull(envelop);
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.writeBlobConditional(null, '123', 60, (err, envelop) => {
+                    assert.isNull(err);
+                    assert.isNotNull(envelop);
+                    assert.isNotNull(envelop.data);
+                    assert.isNull(envelop.blob_id);
+                    assert.equal("123", envelop.data);
 
-//     public testGetUriForMissingBlob(done) {
-//         this._client.getBlobUriById(null, '123', (err, uri) => {
-//             assert.isNull(err);
-//             done();
-//         });
-//     }
+                    envelop1 = envelop;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.readBlobConditional(null, envelop1, (err, data) => {
+                    assert.isNull(err);
+                    assert.equal("123", data);
+                    callback();
+                });
+            },
+            // should be written to blob
+            (callback) => {
+                this._client.writeBlobConditional(null, testData1, 60, (err, envelop) => {
+                    assert.isNull(err);
+                    assert.isNotNull(envelop);
+                    assert.isNull(envelop.data);
+                    assert.isNotNull(envelop.blob_id);
 
+                    envelop1 = envelop;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.readBlobConditional(null, envelop1, (err, data) => {
+                    assert.isNull(err);
+                    assert.equal(testData1, data);
+                    callback();
+                });
+            },
+            //  should be written to blob and compressed
+            (callback) => {
+                this._client.writeBlobConditional(null, testData2, 60, (err, envelop) => {
+                    assert.isNull(err);
+                    assert.isNotNull(envelop);
+                    assert.isNull(envelop.data);
+                    assert.isNotNull(envelop.blob_id);
 
-// }
+                    envelop1 = envelop;
+                    callback();
+                });
+            },
+            (callback) => {
+                this._client.readBlobConditional(null, envelop1, (err, data) => {
+                    assert.isNull(err);
+                    assert.equal(testData2, data);
+                    callback();
+                });
+            },
+        ], done);
+    }
+
+}
