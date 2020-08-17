@@ -4,10 +4,7 @@ This is a Node.js client SDK for [pip-services-storage](https://github.com/pip-s
 It provides an easy to use abstraction over communication protocols:
 
 * HTTP/REST client
-* Seneca client (see http://www.senecajs.org)
-* AWS Lambda client
 * Direct client for monolythic deploments
-* S3 client to work with S3 storage directly
 * Null client to be used in testing
 
 <a name="links"></a> Quick Links:
@@ -60,7 +57,7 @@ var config = {
 Instantiate the client and open connection to the microservice
 ```javascript
 // Create the client instance
-var client = sdk.StorageRestClient(config);
+var client = new TempBlobsHttpClientV1();
 
 // Connect to the microservice
 client.open(function(err) {
@@ -77,28 +74,23 @@ client.open(function(err) {
 
 Now the client is ready to perform operations
 ```javascript
-// Create a new picture
-var blob = {
-    group: "pictures",
-    name: "google_search.jpg"
-};
-
-client.createBlobFromUrl(
-    null,
-    blob,
-    "https://www.google.com/logos/doodles/2016/doodle-4-google-2016-us-winner-5664555055185920-hp.jpg",
-    function (err, blob) {
+// Write data to blob
+this._client.writeBlobAsObject(
+    null, 
+    "AAAA", 
+    60, 
+    function (err, blobId) {
         ...
     }
 );
 ```
 
 ```javascript
-// Start reading blobs in chunks
-client.getBlobDataById(
-    null,
-    blob_id,
-    function(err, blob, data) {
+// Start reading blob
+client.readBlobAsObject<string>(
+    null, 
+    blobId, 
+    function(err, data) {
         ...    
     }
 );

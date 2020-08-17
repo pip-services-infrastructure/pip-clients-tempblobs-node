@@ -1,9 +1,7 @@
-<a name="1.0.0"></a> ### 1.0.0 (2017-03-28)
+<a name="1.0.0"></a> ### 1.0.0 (2020-08-17)
 
 #### Features
 * **http** HTTP client
-* **seneca** Seneca client
-* **lambda** AWS lambda client
 * **direct** Direct client for monolythic deployments
 * **null** Null client for testing
 * **unit tests** Unit tests using Mocha and Matcha
